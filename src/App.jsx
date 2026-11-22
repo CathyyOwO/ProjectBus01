@@ -48,9 +48,9 @@ export default function App() {
         <div>
           <div className="eyebrow"><MapPinned size={14} /> DISTRICT TRANSIT · PASSENGER</div>
           <h1>รถโดยสารรอบตัวคุณ</h1>
-          <p>ค้นหาเส้นทางและติดตามตำแหน่งรถโดยสารได้ในที่เดียว</p>
+          <p>ระบบตัวอย่างสำหรับอำเภอบ้านบึง จังหวัดชลบุรี</p>
         </div>
-        <div className="live-indicator"><span className="pulse-dot" /> ข้อมูลสาธิต · ไม่ใช่ GPS จริง</div>
+        <div className="live-indicator"><span className="pulse-dot" /> Mock Data · ไม่ใช่ GPS จริง</div>
       </section>
 
       <section className="workspace" id="map">
@@ -83,23 +83,24 @@ export default function App() {
             )) : <div className="empty-state"><Search size={22} /><strong>ไม่พบรถโดยสาร</strong><span>ลองค้นหาด้วยชื่อสายหรือเลขรถอื่น</span></div>}
           </div>
 
-          <div className="sidebar-note"><span className="note-icon">i</span><span>ตำแหน่งรถและความเร็วในหน้านี้เป็นข้อมูล Mock Data เพื่อสาธิตการใช้งาน</span></div>
+          <div className="sidebar-note"><span className="note-icon">i</span><span>รถ ความเร็ว และเส้นทางเป็นข้อมูลจำลองเพื่อสาธิตเท่านั้น ยังไม่ได้เชื่อมต่อ GPS จริง</span></div>
         </aside>
 
         <div className="map-panel">
-          <div className="map-top-label"><span className="map-live-dot" /> แผนที่เครือข่ายรถโดยสาร <span className="map-label-divider" /> <span>ตัวอย่างพื้นที่ให้บริการ</span></div>
+          <div className="map-top-label"><span className="map-live-dot" /> แผนที่รถโดยสาร <span className="map-label-divider" /> <span>อำเภอบ้านบึง จ.ชลบุรี</span></div>
           <TransitMap buses={filteredBuses} selectedBus={selectedBus} onSelectBus={handleSelectBus} activeRoute={activeRoute} />
           <div className="map-legend" id="stops">
             <span><i className="legend-bus" /> รถโดยสาร</span>
-            <span><i className="legend-stop" /> ป้ายจอด</span>
-            <span><i className="legend-route" /> เส้นทาง</span>
+            <span><i className="legend-stop" /> ป้าย/จุดจอด</span>
+            <span><i className="legend-route route-blue" /> สาย 01</span>
+            <span><i className="legend-route route-orange" /> สาย 02</span>
           </div>
-          <div className="map-disclaimer">แผนที่และตำแหน่งรถเป็นข้อมูลสาธิต ไม่ใช่ตำแหน่งรถแบบเรียลไทม์</div>
+          <div className="map-disclaimer">จุดจอดและเส้นทางบางส่วนเป็นตัวอย่างจำลอง</div>
         </div>
       </section>
 
       <BusDetailSheet bus={selectedBus} onClose={() => setSelectedBus(null)} />
-      <footer className="footer"><span>© 2026 District Transit</span><span>ระบบติดตามรถโดยสารสาธารณะระดับอำเภอ</span></footer>
+      <footer className="footer"><span>© 2026 District Transit</span><span>ระบบตัวอย่าง · อำเภอบ้านบึง จังหวัดชลบุรี</span></footer>
     </main>
   );
 }
