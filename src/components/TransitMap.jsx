@@ -8,14 +8,16 @@ export default function TransitMap({ buses, selectedBus, onSelectBus, activeRout
   const mapRef = useRef(null);
   const markersRef = useRef([]);
   const [mapLoaded, setMapLoaded] = useState(false);
+  const [mapError, setMapError] = useState(false);
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
     const map = new maplibregl.Map({
       container: containerRef.current,
-      style: "https://demotiles.maplibre.org/style.json",
-      center: [100.511, 13.756],
-      zoom: 12.6,
+      // แผนที่โทนอ่อน ลดความรกของพื้นหลังเพื่อเน้นรถและเส้นทาง
+      style: "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json",
+      center: [101.1127, 13.3119],
+      zoom: 14.2,
       attributionControl: true,
     });
 
@@ -25,14 +27,27 @@ export default function TransitMap({ buses, selectedBus, onSelectBus, activeRout
           type: "geojson",
           data: { type: "Feature", geometry: { type: "LineString", coordinates: route.coordinates }, properties: {} },
         });
+        // เส้นขอบสีขาวช่วยให้เส้นทางเด่นขึ้นโดยไม่กลืนกับถนนบนแผนที่
+        map.addLayer({
+          id: `route-casing-${route.id}`,
+          type: "line",
+          source: `route-${route.id}`,
+          layout: { "line-cap": "round", "line-join": "round" },
+          paint: { "line-color": "#ffffff", "line-width": 8, "line-opacity": 0.95 },
+        });
         map.addLayer({
           id: `route-line-${route.id}`,
           type: "line",
           source: `route-${route.id}`,
-          paint: { "line-color": route.color, "line-width": 4, "line-opacity": 0.82 },
+          layout: { "line-cap": "round", "line-join": "round" },
+          paint: { "line-color": route.color, "line-width": 4.5, "line-opacity": 0.95 },
         });
       });
       setMapLoaded(true);
+    });
+
+    map.on("error", () => {
+      if (!mapLoaded) setMapError(true);
     });
 
     mapRef.current = map;
@@ -49,9 +64,12 @@ export default function TransitMap({ buses, selectedBus, onSelectBus, activeRout
     if (!map || !mapLoaded) return;
     routeGeometry.forEach((route) => {
       const visible = activeRoute === "all" || route.id === activeRoute;
-      if (map.getLayer(`route-line-${route.id}`)) {
-        map.setLayoutProperty(`route-line-${route.id}`, "visibility", visible ? "visible" : "none");
-      }
+      ["route-casing-", "route-line-"].forEach((prefix) => {
+        const layerId = `${prefix}${route.id}`;
+        if (map.getLayer(layerId)) {
+          map.setLayoutProperty(layerId, "visibility", visible ? "visible" : "none");
+        }
+      });
     });
   }, [activeRoute, mapLoaded]);
 
@@ -63,10 +81,16 @@ export default function TransitMap({ buses, selectedBus, onSelectBus, activeRout
 
     busStops.forEach((stop) => {
       const element = document.createElement("div");
-      element.className = "stop-marker";
+      element.className = "stop-marker-wrap";
       element.title = stop.name;
       element.setAttribute("role", "img");
       element.setAttribute("aria-label", `ป้ายรถโดยสาร ${stop.name}`);
+      const dot = document.createElement("span");
+      dot.className = "stop-marker";
+      const label = document.createElement("span");
+      label.className = "stop-marker-label";
+      label.textContent = stop.name;
+      element.append(dot, label);
       const marker = new maplibregl.Marker({ element, anchor: "center" }).setLngLat(stop.coordinates).addTo(map);
       markersRef.current.push(marker);
     });
@@ -76,7 +100,13 @@ export default function TransitMap({ buses, selectedBus, onSelectBus, activeRout
       element.className = `bus-map-marker ${selectedBus?.id === bus.id ? "is-selected" : ""}`;
       element.type = "button";
       element.setAttribute("aria-label", `เลือกรถ ${bus.code}`);
-      element.innerHTML = '<span class="marker-bus-icon">B</span>';
+      const icon = document.createElement("span");
+      icon.className = "marker-bus-icon";
+      icon.textContent = "B";
+      const code = document.createElement("span");
+      code.className = "marker-bus-code";
+      code.textContent = bus.code;
+      element.append(icon, code);
       element.addEventListener("click", () => onSelectBus(bus));
       const marker = new maplibregl.Marker({ element, anchor: "center" }).setLngLat(bus.coordinates).addTo(map);
       markersRef.current.push(marker);
@@ -85,7 +115,7 @@ export default function TransitMap({ buses, selectedBus, onSelectBus, activeRout
 
   useEffect(() => {
     if (selectedBus && mapRef.current) {
-      mapRef.current.flyTo({ center: selectedBus.coordinates, zoom: 14, duration: 700 });
+      mapRef.current.flyTo({ center: selectedBus.coordinates, zoom: 15.2, duration: 700 });
     }
   }, [selectedBus]);
 
@@ -104,14 +134,15 @@ export default function TransitMap({ buses, selectedBus, onSelectBus, activeRout
 
   return (
     <div className="map-canvas-wrap">
-      <div ref={containerRef} className="map-canvas" aria-label="แผนที่รถโดยสารสาธิต" />
+      <div ref={containerRef} className="map-canvas" aria-label="แผนที่รถโดยสารสาธิต อำเภอบ้านบึง จังหวัดชลบุรี" />
+      {mapError && <div className="map-error">โหลดแผนที่ไม่สำเร็จ กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ต</div>}
       <div className="map-controls" aria-label="เครื่องมือแผนที่">
         <button type="button" onClick={zoomIn} aria-label="ซูมเข้า"><Plus size={19} /></button>
         <button type="button" onClick={zoomOut} aria-label="ซูมออก"><Minus size={19} /></button>
         <span />
         <button type="button" onClick={locate} aria-label="ค้นหาตำแหน่งปัจจุบัน"><LocateFixed size={19} /></button>
       </div>
-      <div className="map-demo-stamp">DEMO MAP</div>
+      <div className="map-demo-stamp">MOCK DATA · บ้านบึง</div>
     </div>
   );
 }
