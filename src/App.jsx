@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { BusFront, MapPinned, Menu, Search, X } from "lucide-react";
 import TransitMap from "./components/TransitMap.jsx";
 import BusDetailSheet from "./components/BusDetailSheet.jsx";
@@ -9,6 +9,7 @@ export default function App() {
   const [selectedBus, setSelectedBus] = useState(null);
   const [activeRoute, setActiveRoute] = useState("all");
   const [menuOpen, setMenuOpen] = useState(false);
+  const handleSelectBus = useCallback((bus) => setSelectedBus(bus), []);
 
   const filteredBuses = useMemo(() => buses.filter((bus) => {
     const text = query.trim().toLowerCase();
@@ -16,6 +17,12 @@ export default function App() {
     const matchesRoute = activeRoute === "all" || bus.routeId === activeRoute;
     return matchesText && matchesRoute;
   }), [query, activeRoute]);
+
+  useEffect(() => {
+    if (selectedBus && !filteredBuses.some((bus) => bus.id === selectedBus.id)) {
+      setSelectedBus(null);
+    }
+  }, [filteredBuses, selectedBus]);
 
   return (
     <main className="app-shell">
@@ -31,7 +38,7 @@ export default function App() {
         </nav>
         <div className="header-right">
           <span className="service-status"><i /> ระบบตัวอย่าง</span>
-          <button className="icon-button mobile-menu" onClick={() => setMenuOpen((open) => !open)} aria-label={menuOpen ? "ปิดเมนู" : "เปิดเมนู"}>
+          <button type="button" className="icon-button mobile-menu" onClick={() => setMenuOpen((open) => !open)} aria-label={menuOpen ? "ปิดเมนู" : "เปิดเมนู"}>
             {menuOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
         </div>
@@ -51,7 +58,7 @@ export default function App() {
           <div className="search-box">
             <Search size={19} />
             <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="ค้นหาสายรถ ปลายทาง หรือเลขรถ" aria-label="ค้นหาเส้นทางหรือรถโดยสาร" />
-            {query && <button className="clear-search" onClick={() => setQuery("")} aria-label="ล้างคำค้น"><X size={16} /></button>}
+            {query && <button type="button" className="clear-search" onClick={() => setQuery("")} aria-label="ล้างคำค้น"><X size={16} /></button>}
           </div>
 
           <div className="section-row" id="routes">
@@ -59,13 +66,13 @@ export default function App() {
             <span className="count-pill">{filteredBuses.length} คัน</span>
           </div>
           <div className="route-filters">
-            <button className={activeRoute === "all" ? "filter-chip selected" : "filter-chip"} onClick={() => setActiveRoute("all")}>ทั้งหมด</button>
-            {routes.map((route) => <button key={route.id} className={activeRoute === route.id ? "filter-chip selected" : "filter-chip"} onClick={() => setActiveRoute(route.id)}>{route.shortName}</button>)}
+            <button type="button" className={activeRoute === "all" ? "filter-chip selected" : "filter-chip"} onClick={() => setActiveRoute("all")}>ทั้งหมด</button>
+            {routes.map((route) => <button type="button" key={route.id} className={activeRoute === route.id ? "filter-chip selected" : "filter-chip"} onClick={() => setActiveRoute(route.id)}>{route.shortName}</button>)}
           </div>
 
           <div className="bus-list">
             {filteredBuses.length ? filteredBuses.map((bus) => (
-              <button key={bus.id} className={`bus-card ${selectedBus?.id === bus.id ? "chosen" : ""}`} onClick={() => setSelectedBus(bus)}>
+              <button type="button" key={bus.id} className={`bus-card ${selectedBus?.id === bus.id ? "chosen" : ""}`} onClick={() => handleSelectBus(bus)}>
                 <span className="bus-icon"><BusFront size={19} /></span>
                 <span className="bus-card-main">
                   <strong>{bus.code}<small>{bus.routeName}</small></strong>
@@ -81,8 +88,8 @@ export default function App() {
 
         <div className="map-panel">
           <div className="map-top-label"><span className="map-live-dot" /> แผนที่เครือข่ายรถโดยสาร <span className="map-label-divider" /> <span>ตัวอย่างพื้นที่ให้บริการ</span></div>
-          <TransitMap buses={filteredBuses} selectedBus={selectedBus} onSelectBus={setSelectedBus} />
-          <div className="map-legend">
+          <TransitMap buses={filteredBuses} selectedBus={selectedBus} onSelectBus={handleSelectBus} activeRoute={activeRoute} />
+          <div className="map-legend" id="stops">
             <span><i className="legend-bus" /> รถโดยสาร</span>
             <span><i className="legend-stop" /> ป้ายจอด</span>
             <span><i className="legend-route" /> เส้นทาง</span>
