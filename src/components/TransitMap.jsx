@@ -1,12 +1,13 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import maplibregl from "maplibre-gl";
 import { LocateFixed, Minus, Plus } from "lucide-react";
 import { busStops, routeGeometry } from "../data/mockTransit.js";
 
-export default function TransitMap({ buses, selectedBus, onSelectBus }) {
+export default function TransitMap({ buses, selectedBus, onSelectBus, activeRoute }) {
   const containerRef = useRef(null);
   const mapRef = useRef(null);
   const markersRef = useRef([]);
+  const [mapLoaded, setMapLoaded] = useState(false);
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -17,7 +18,7 @@ export default function TransitMap({ buses, selectedBus, onSelectBus }) {
       zoom: 12.6,
       attributionControl: true,
     });
-    map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
+
     map.on("load", () => {
       routeGeometry.forEach((route) => {
         map.addSource(`route-${route.id}`, {
@@ -31,18 +32,32 @@ export default function TransitMap({ buses, selectedBus, onSelectBus }) {
           paint: { "line-color": route.color, "line-width": 4, "line-opacity": 0.82 },
         });
       });
+      setMapLoaded(true);
     });
+
     mapRef.current = map;
     return () => {
       markersRef.current.forEach((marker) => marker.remove());
       map.remove();
       mapRef.current = null;
+      setMapLoaded(false);
     };
   }, []);
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map) return;
+    if (!map || !mapLoaded) return;
+    routeGeometry.forEach((route) => {
+      const visible = activeRoute === "all" || route.id === activeRoute;
+      if (map.getLayer(`route-line-${route.id}`)) {
+        map.setLayoutProperty(`route-line-${route.id}`, "visibility", visible ? "visible" : "none");
+      }
+    });
+  }, [activeRoute, mapLoaded]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapLoaded) return;
     markersRef.current.forEach((marker) => marker.remove());
     markersRef.current = [];
 
@@ -50,6 +65,8 @@ export default function TransitMap({ buses, selectedBus, onSelectBus }) {
       const element = document.createElement("div");
       element.className = "stop-marker";
       element.title = stop.name;
+      element.setAttribute("role", "img");
+      element.setAttribute("aria-label", `ป้ายรถโดยสาร ${stop.name}`);
       const marker = new maplibregl.Marker({ element, anchor: "center" }).setLngLat(stop.coordinates).addTo(map);
       markersRef.current.push(marker);
     });
@@ -64,7 +81,7 @@ export default function TransitMap({ buses, selectedBus, onSelectBus }) {
       const marker = new maplibregl.Marker({ element, anchor: "center" }).setLngLat(bus.coordinates).addTo(map);
       markersRef.current.push(marker);
     });
-  }, [buses, selectedBus, onSelectBus]);
+  }, [buses, selectedBus, onSelectBus, mapLoaded]);
 
   useEffect(() => {
     if (selectedBus && mapRef.current) {
@@ -89,10 +106,10 @@ export default function TransitMap({ buses, selectedBus, onSelectBus }) {
     <div className="map-canvas-wrap">
       <div ref={containerRef} className="map-canvas" aria-label="แผนที่รถโดยสารสาธิต" />
       <div className="map-controls" aria-label="เครื่องมือแผนที่">
-        <button onClick={zoomIn} aria-label="ซูมเข้า"><Plus size={19} /></button>
-        <button onClick={zoomOut} aria-label="ซูมออก"><Minus size={19} /></button>
+        <button type="button" onClick={zoomIn} aria-label="ซูมเข้า"><Plus size={19} /></button>
+        <button type="button" onClick={zoomOut} aria-label="ซูมออก"><Minus size={19} /></button>
         <span />
-        <button onClick={locate} aria-label="ค้นหาตำแหน่งปัจจุบัน"><LocateFixed size={19} /></button>
+        <button type="button" onClick={locate} aria-label="ค้นหาตำแหน่งปัจจุบัน"><LocateFixed size={19} /></button>
       </div>
       <div className="map-demo-stamp">DEMO MAP</div>
     </div>
